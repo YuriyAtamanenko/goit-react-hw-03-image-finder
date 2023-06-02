@@ -5,58 +5,55 @@ import Button from '../Button/Button';
 import Loader from '../Loader/Loader';
 
 import ImagesApiService from '../../services/API';
-const imagesApiService = new ImagesApiService();
 
 export default class App extends Component {
   state = {
     query: '',
     imgs: [],
-    isLoadMore: false,
+    page: null,
+    isLoadMoreBtn: false,
     isLoader: false,
   };
 
-  handleFromSubmit = query => {
-    imagesApiService.resetPage();
-    this.setState({ isLoader: true, isLoadMore: false });
+  componentDidUpdate(prevProps, prevState) {
+    if (
+      prevState.query !== this.state.query ||
+      prevState.page !== this.state.page
+    ) {
+      ImagesApiService(this.state.query, this.state.page)
+        .then(data =>
+          data.hits.length < 12
+            ? this.setState(PrevState => ({
+                imgs: [...PrevState.imgs, ...data.hits],
+                isLoader: false,
+                isLoadMoreBtn: false,
+              }))
+            : this.setState(PrevState => ({
+                imgs: [...PrevState.imgs, ...data.hits],
+                isLoader: false,
+                isLoadMoreBtn: true,
+              }))
+        )
+        .catch(error => console.log(error));
+    }
+  }
 
-    imagesApiService
-      .getImages(query)
-      .then(data =>
-        data.hits.length < 12
-          ? this.setState({
-              query,
-              imgs: data.hits,
-              isLoader: false,
-              isLoadMore: false,
-            })
-          : this.setState({
-              query,
-              imgs: data.hits,
-              isLoader: false,
-              isLoadMore: true,
-            })
-      )
-      .catch(error => console.log(error));
+  handleFromSubmit = query => {
+    this.setState({
+      query,
+      imgs: [],
+      page: 1,
+      isLoader: true,
+      isLoadMoreBtn: false,
+    });
   };
 
   handleLoadMore = () => {
-    this.setState({ isLoader: true, isLoadMore: false });
-    imagesApiService
-      .getImages(this.state.query)
-      .then(data =>
-        data.hits.length < 12
-          ? this.setState(PrevState => ({
-              imgs: [...PrevState.imgs, ...data.hits],
-              isLoader: false,
-              isLoadMore: false,
-            }))
-          : this.setState(PrevState => ({
-              imgs: [...PrevState.imgs, ...data.hits],
-              isLoader: false,
-              isLoadMore: true,
-            }))
-      )
-      .catch(error => console.log(error));
+    this.setState(({ page }) => ({
+      page: page + 1,
+      isLoader: true,
+      isLoadMoreBtn: false,
+    }));
   };
 
   render() {
@@ -64,7 +61,7 @@ export default class App extends Component {
       <div>
         <Searchbar onSubmit={this.handleFromSubmit} />
         {this.state.query && <ImageGallery imgs={this.state.imgs} />}
-        {this.state.isLoadMore && <Button onClick={this.handleLoadMore} />}
+        {this.state.isLoadMoreBtn && <Button onClick={this.handleLoadMore} />}
         {this.state.isLoader && <Loader />}
       </div>
     );
